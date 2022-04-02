@@ -1,0 +1,114 @@
+import math
+
+import numpy as np
+
+
+class KNN:
+    # this constructor takes the train data and train ratio then extracts the featuer vector for all trian data
+    def __init__(self, x_train, y_train, x_test, train_ratio=10.0):
+        ratio_train = (len(x_train) // 100) * train_ratio
+        self.x_train_feature_vectors = list()
+        self.x_test_feature_vectors = list()
+        print("Train size: ", ratio_train)
+        print("Converting train data: ")
+        for i in range(int(ratio_train)):
+            self.x_train_feature_vectors.append(list([photo_centronization(x_train[i]).tolist(), y_train[i]]))
+        print("Converting ended: ")
+        print("converting test data: ")
+        for i in x_test:
+            self.x_test_feature_vectors.append(photo_centronization(i))
+        print("converting ended: ")
+
+    # this function takes one test photo and K then predicts the value
+    def predeict(self, photo, k):
+        test_photo_featuer_vectro = photo_centronization(photo)
+        distances = list()
+        for i in self.x_train_feature_vectors:
+            distances.append(list([math.dist(test_photo_featuer_vectro, i[0]), i[1]]))
+        distance = lambda s: s[0]
+        distances.sort(key=distance)
+        return final_result(distances[0:k])
+
+    def predeict2(self, feature_vector, k):
+        distances = list()
+        for i in self.x_train_feature_vectors:
+            distances.append(list([math.dist(feature_vector, i[0]), i[1]]))
+        distance = lambda s: s[0]
+        distances.sort(key=distance)
+        return final_result(distances[0:k])
+
+    # this function takes test data and the test ratio and calculate the accuracy
+    def accuracy(self, x_test, y_test, test_ratio, k=1):
+        accuracy = 0
+        ratio_test = (len(x_test) // 100) * test_ratio
+        print("Test size: ", ratio_test)
+        print("Testing: ")
+        for i in range(ratio_test):
+            if y_test[i] == self.predeict2(x_test[i], k):
+                accuracy += 1
+        print("Testing ended: ")
+        return (accuracy / ratio_test) * 100
+
+    def accuracy2(self, y_test, test_ratio, k=1):
+        accuracy = 0
+        ratio_test = (len(self.x_test_feature_vectors) // 100) * test_ratio
+        print("Test size: ", ratio_test)
+        print("Testing: ")
+        for i in range(ratio_test):
+            if y_test[i] == self.predeict2(self.x_test_feature_vectors[i], k):
+                accuracy += 1
+            print(((i + 1) / ratio_test) * 100, "% has ended")
+        print("Testing ended: ")
+        return (accuracy / ratio_test) * 100
+
+
+# this function divides the photo into 16 block
+def blocks_divider(array):
+    x_ax = 0
+    dum = list()
+    for i in range(4):
+        for y in range(0, len(array), 7):
+            for x in range(x_ax, x_ax + 7):
+                dum.append(list(array[x, y:y + 7]))
+
+        x_ax += 7
+    divided_photo = np.array(dum).reshape(16, 7, 7)
+    return divided_photo
+
+
+# this function calculates the centroid for block
+def xy_centroid(array):
+    centered_x = 0
+    centered_y = 0
+    array_sumation = np.array(array).sum()
+    for i in range(len(array)):
+        for I in range(len(array)):
+            centered_x = centered_x + (array[i][I] * i)
+            centered_y = centered_y + (array[i][I] * I)
+    if array_sumation == 0:
+        return 0, 0
+    return centered_x // array_sumation, centered_y // array_sumation
+
+
+# this function takes photo and calculate the feature vector passed on centroids
+def photo_centronization(photo):
+    vector = list()
+    for i in blocks_divider(photo):
+        vector.append(xy_centroid(i))
+    return np.array(vector).reshape(32)
+
+
+# this function takes list of size K and decides the mod value
+def final_result(li):
+    li = np.array(li).reshape(len(li) * 2)
+    li = li.tolist()
+    dum = [li[x] for x in range(1, len(li), 2)]
+    count = 0
+    answer = dum[0]
+    for i in dum:
+        if count < dum.count(i):
+            count = dum.count(i)
+            answer = i
+            dum.remove(i)
+    return answer
+
